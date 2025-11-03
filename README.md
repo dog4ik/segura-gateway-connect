@@ -26,9 +26,10 @@ This project integrates SeguraPay gateway with reactivepay platform using Gatewa
 }
 ```
 
-### RP request minimal request body:
+### RP request body:
 
 H2H
+
 ```
 {
   "product": "Your Product",
@@ -57,6 +58,7 @@ H2H
 ```
 
 Redirect
+
 ```
 {
   "product": "Your Product",

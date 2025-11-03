@@ -84,7 +84,7 @@ impl Display for InitRequestUrlSuffix {
 
 impl SeguraGateway {
     #[cfg(debug_assertions)]
-    const BASE_URL: &str = "https://ap-dev.segura-pay.com/api/v1/payment-gateway";
+    const BASE_URL: &str = "https://api-dev.segura-pay.com/api/v1/payment-gateway";
     #[cfg(not(debug_assertions))]
     const BASE_URL: &str = "https://api.segura-pay.com/api/v1/payment-gateway";
 
