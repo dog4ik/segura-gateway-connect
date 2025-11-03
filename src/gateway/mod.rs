@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use axum::http::HeaderMap;
 use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
@@ -80,7 +79,6 @@ impl Display for InitRequestUrlSuffix {
 
 #[derive(Debug)]
 pub struct RequestContext {
-    auth_headers: HeaderMap,
     base_url: &'static str,
     client: reqwest::Client,
 }
@@ -95,11 +93,7 @@ impl RequestContext {
             .default_headers(authenticated_headers(&settings.client_id, &settings.secret))
             .build()
             .unwrap();
-        Self {
-            auth_headers: authenticated_headers(&settings.client_id, &settings.secret),
-            base_url,
-            client,
-        }
+        Self { base_url, client }
     }
 
     pub async fn post<R: Serialize, T: DeserializeOwned>(
@@ -112,13 +106,7 @@ impl RequestContext {
         let secured_request = mask::secure_serializable(body);
         tracing::debug!(%url, data = %secured_request, "Gateway API request");
         span.set_request(url.clone(), &secured_request);
-        let res = self
-            .client
-            .post(&url)
-            .json(&body)
-            .headers(self.auth_headers())
-            .send()
-            .await?;
+        let res = self.client.post(&url).json(&body).send().await?;
         let status = res.status().as_u16();
         span.set_response_status(status);
         let response = res.json::<serde_json::Value>().await?;
@@ -142,12 +130,7 @@ impl RequestContext {
         let url = format!("{}{}", self.base_url, suffix);
         tracing::debug!(%url, "Gateway API request");
         span.set_request(url.clone(), &serde_json::Value::Null);
-        let res = self
-            .client
-            .get(&url)
-            .headers(self.auth_headers())
-            .send()
-            .await?;
+        let res = self.client.get(&url).send().await?;
         let status = res.status().as_u16();
         span.set_response_status(status);
         let response = res.json::<serde_json::Value>().await?;
@@ -161,10 +144,6 @@ impl RequestContext {
         );
         let res: T = serde_json::from_value(response)?;
         Ok(res)
-    }
-
-    pub fn auth_headers(&self) -> HeaderMap {
-        self.auth_headers.clone()
     }
 
     async fn init(
