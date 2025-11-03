@@ -23,8 +23,8 @@ impl<'a> From<&'a connect::api::payment::GwConnectH2HPaymentRequest>
     ) -> Self {
         let callback_url = std::env::var("CALLBACK_URL").ok();
         super::payin::PaymentInitRequest {
-            amount: payment.amount.to_string(),
-            currency: &payment.currency,
+            amount: payment.gateway_amount.to_string(),
+            currency: &payment.gateway_currency,
             email: params.email.as_deref(),
             country: params.country.as_deref(),
             callback_url,

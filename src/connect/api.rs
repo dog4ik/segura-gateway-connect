@@ -210,8 +210,8 @@ pub mod payment {
 
     #[derive(Debug, Deserialize, Clone)]
     pub struct Payment {
-        pub amount: usize,
-        pub currency: String,
+        pub gateway_amount: usize,
+        pub gateway_currency: String,
         pub product: String,
         pub ip: Option<String>,
         pub token: String,
