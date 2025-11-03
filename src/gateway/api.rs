@@ -2,14 +2,26 @@ use axum::{Json, extract::State, routing::post};
 use reqwest::StatusCode;
 use tracing::instrument;
 
-use crate::{connect, gateway, state::AppState};
+use crate::{
+    connect,
+    gateway::{self, mask},
+    state::AppState,
+};
 
-#[instrument(skip_all, fields(gateway_id = %callback.order_reference))]
+#[instrument(skip_all)]
 async fn callback_handler(
     state: State<AppState>,
-    axum::Json(callback): Json<gateway::callback::CallbackPayload>,
+    axum::Json(callback): Json<serde_json::Value>,
 ) -> StatusCode {
-    tracing::trace!("Received callback from external gateway");
+    tracing::trace!(
+        data = %mask::secure_value(&callback),
+        "Received callback from external gateway"
+    );
+    let Ok(callback) = serde_json::from_value::<gateway::callback::CallbackPayload>(callback)
+    else {
+        tracing::warn!("Failed to deserialize callback body");
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    };
     let mapping = match state.db.get_mapping(&callback.order_reference).await {
         Ok(Some(mapping)) => mapping,
         Ok(None) => {
