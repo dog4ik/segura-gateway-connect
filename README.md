@@ -84,7 +84,7 @@ Redirect
 ### Compile time env variables
 
 - `DATABASE_URL` - Connection string for sqlite database
-- `RP_CALLBACK_URL_BASE` - Gateway.Connect callback url override (optional)
+- `BUSINESS_URL` - Gateway.Connect callback url override (optional)
 
 ### Runtime env variables:
 
