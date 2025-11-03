@@ -48,7 +48,7 @@ pub struct ProcessRequest<'a> {
     pub customer_first_name: Option<&'a str>,
     #[serde(rename = "customerlastname")]
     pub customer_last_name: Option<&'a str>,
-    pub card_scheme: Option<&'a str>, // e.g. "VISA"
+    pub card_scheme: Option<String>, // e.g. "VISA"
     pub card_type: Option<&'a str>,   // e.g. "DEBIT"
 }
 

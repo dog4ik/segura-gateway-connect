@@ -98,7 +98,9 @@ impl From<SeguraOkResponse<super::payin::PaymentInitData>>
 
 impl<'a> super::payin::ProcessRequest<'a> {
     pub fn from(
-        GwConnectH2HPaymentRequest { params, .. }: &'a GwConnectH2HPaymentRequest,
+        GwConnectH2HPaymentRequest {
+            params, payment, ..
+        }: &'a GwConnectH2HPaymentRequest,
         card_params: &'a H2HCardParams,
         reference: &'a str,
     ) -> Self {
@@ -121,8 +123,7 @@ impl<'a> super::payin::ProcessRequest<'a> {
             cardholder_name: &card_params.holder,
             customer_first_name: params.first_name.as_deref(),
             customer_last_name: params.last_name.as_deref(),
-            // TODO: pass card_brand
-            card_scheme: None,
+            card_scheme: payment.card_brand_name.as_ref().map(|v| v.to_uppercase()),
             // TODO: pass card type???
             card_type: None,
         }

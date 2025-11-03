@@ -211,6 +211,7 @@ pub mod payment {
         pub product: String,
         pub ip: Option<String>,
         pub token: String,
+        pub card_brand_name: Option<String>,
         pub merchant_private_key: String,
     }
 
