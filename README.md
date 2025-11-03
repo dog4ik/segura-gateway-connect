@@ -21,7 +21,8 @@ This project integrates SeguraPay gateway with reactivepay platform using Gatewa
       "client_id": "TSPIOAJP-976011-20251016",
       "secret": "TSaAbqlSeUhBBC8Kfrf4UOb1kgwCDtFPRh4LdFiWexVneL4Vz9Ng81953",
       "sign_key": "e7403b3c0d76a35312e7cc65eeb75808"
-    }
+    },
+    "sandbox": false
   }
 }
 ```
@@ -83,7 +84,7 @@ Redirect
 ### Compile time env variables
 
 - `DATABASE_URL` - Connection string for sqlite database
-- `RP_CALLBACK_URL` - Gateway.Connect callback url override (optional)
+- `RP_CALLBACK_URL_BASE` - Gateway.Connect callback url override (optional)
 
 ### Runtime env variables:
 

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use axum::http::HeaderMap;
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
     connect::{self, interaction_log::InteractionSpan},
@@ -62,11 +63,6 @@ impl<T> SeguraResponse<T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SeguraGateway {
-    client: reqwest::Client,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum InitRequestUrlSuffix {
     Initialize,
@@ -76,70 +72,118 @@ pub enum InitRequestUrlSuffix {
 impl Display for InitRequestUrlSuffix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Initialize => f.write_str("initialize"),
-            Self::HostedPayment => f.write_str("hosted-payment"),
+            Self::Initialize => f.write_str("/initialize"),
+            Self::HostedPayment => f.write_str("/hosted-payment"),
         }
     }
 }
 
-impl SeguraGateway {
-    #[cfg(debug_assertions)]
-    const BASE_URL: &str = "https://api-dev.segura-pay.com/api/v1/payment-gateway";
-    #[cfg(not(debug_assertions))]
-    const BASE_URL: &str = "https://api.segura-pay.com/api/v1/payment-gateway";
+#[derive(Debug)]
+pub struct RequestContext {
+    auth_headers: HeaderMap,
+    base_url: &'static str,
+    client: reqwest::Client,
+}
 
-    pub fn new() -> Self {
-        let client = reqwest::Client::new();
-        Self { client }
+impl RequestContext {
+    pub fn new(settings: &connect::api::payment::Settings) -> Self {
+        let base_url = match settings.sandbox.unwrap_or(false) {
+            true => "https://api-dev.segura-pay.com/api/v1/payment-gateway",
+            false => "https://api.segura-pay.com/api/v1/payment-gateway",
+        };
+        let client = reqwest::ClientBuilder::new()
+            .default_headers(authenticated_headers(&settings.client_id, &settings.secret))
+            .build()
+            .unwrap();
+        Self {
+            auth_headers: authenticated_headers(&settings.client_id, &settings.secret),
+            base_url,
+            client,
+        }
     }
 
-    async fn init(
+    pub async fn post<R: Serialize, T: DeserializeOwned>(
         &self,
-        auth_headers: HeaderMap,
-        request: payin::PaymentInitRequest<'_>,
+        suffix: &str,
+        body: &R,
         span: &mut InteractionSpan,
-        url_suffix: InitRequestUrlSuffix,
-    ) -> Result<SeguraOkResponse<payin::PaymentInitData>> {
-        let secured_request = mask::secure_serializable(&request);
-        let url = format!("{}/{}", Self::BASE_URL, url_suffix);
-        tracing::debug!(%url, data = %secured_request, "Gateway API payment init request");
+    ) -> Result<T> {
+        let url = format!("{}{}", self.base_url, suffix);
+        let secured_request = mask::secure_serializable(body);
+        tracing::debug!(%url, data = %secured_request, "Gateway API request");
         span.set_request(url.clone(), &secured_request);
         let res = self
             .client
             .post(&url)
-            .json(&request)
-            .headers(auth_headers)
+            .json(&body)
+            .headers(self.auth_headers())
             .send()
             .await?;
-        span.set_response_status(res.status().as_u16());
-
+        let status = res.status().as_u16();
+        span.set_response_status(status);
         let response = res.json::<serde_json::Value>().await?;
         let secured_response = mask::secure_value(&response);
         span.set_response(&secured_response);
         tracing::debug!(
+            %url,
+            %status,
             response = %secured_response,
-            "Gateway API payment init response"
+            "Gateway API response"
         );
-        let res: SeguraResponse<_> = serde_json::from_value(response)?;
+        let res: T = serde_json::from_value(response)?;
+        Ok(res)
+    }
+
+    pub async fn get<T: DeserializeOwned>(
+        &self,
+        suffix: &str,
+        span: &mut InteractionSpan,
+    ) -> Result<T> {
+        let url = format!("{}{}", self.base_url, suffix);
+        tracing::debug!(%url, "Gateway API request");
+        span.set_request(url.clone(), &serde_json::Value::Null);
+        let res = self
+            .client
+            .get(&url)
+            .headers(self.auth_headers())
+            .send()
+            .await?;
+        let status = res.status().as_u16();
+        span.set_response_status(status);
+        let response = res.json::<serde_json::Value>().await?;
+        let secured_response = mask::secure_value(&response);
+        span.set_response(&secured_response);
+        tracing::debug!(
+            %url,
+            %status,
+            response = %secured_response,
+            "Gateway API response"
+        );
+        let res: T = serde_json::from_value(response)?;
+        Ok(res)
+    }
+
+    pub fn auth_headers(&self) -> HeaderMap {
+        self.auth_headers.clone()
+    }
+
+    async fn init(
+        &self,
+        request: payin::PaymentInitRequest<'_>,
+        span: &mut InteractionSpan,
+        url_suffix: InitRequestUrlSuffix,
+    ) -> Result<SeguraOkResponse<payin::PaymentInitData>> {
+        let res: SeguraResponse<_> = self.post(&url_suffix.to_string(), &request, span).await?;
         Ok(res.into_std_result()?)
     }
 
     pub async fn init_h2h_payment(
         &self,
-        pay_request: &connect::api::payment::GwConnectH2HPaymentRequest,
+        pay_request: payin::PaymentInitRequest<'_>,
         span: &mut InteractionSpan,
     ) -> Result<SeguraOkResponse<payin::PaymentInitData>> {
-        let client_id = &pay_request.settings.client_id;
-        let secret = &pay_request.settings.secret;
-
-        let headers = authenticated_headers(client_id, secret);
         let init_response = self
-            .init(
-                headers,
-                pay_request.into(),
-                span,
-                InitRequestUrlSuffix::Initialize,
-            )
+            .init(pay_request, span, InitRequestUrlSuffix::Initialize)
             .await?;
 
         Ok(init_response)
@@ -154,11 +198,6 @@ impl SeguraGateway {
         span: &mut InteractionSpan,
     ) -> Result<SeguraOkResponse<payin::PaymentProcessData>> {
         let request = payin::ProcessRequest::from(pay_request, card_params, reference);
-        let secured_request = mask::secure_serializable(&request);
-        let url = format!("{}/process", Self::BASE_URL);
-        span.set_request(url.clone(), &secured_request);
-
-        tracing::debug!(data = %secured_request, "Gateway API payment request");
 
         let mapping_insert = db.insert_mapping(
             &pay_request.payment.merchant_private_key,
@@ -166,34 +205,18 @@ impl SeguraGateway {
             reference,
         );
 
-        let headers = authenticated_headers(
-            &pay_request.settings.client_id,
-            &pay_request.settings.secret,
-        );
-
         let process_request = async {
-            let res = self
-                .client
-                .post(url)
-                .json(&request)
-                .headers(headers)
-                .send()
-                .await?;
-            span.set_response_status(res.status().as_u16());
-            res.json::<serde_json::Value>().await
+            self.post::<_, SeguraResponse<_>>("/process", &request, span)
+                .await
         };
 
         let (mapping_insert, response) = tokio::join!(mapping_insert, process_request);
+        let response = response?;
         if let Err(e) = mapping_insert {
             tracing::error!("Failed to insert gateway id mapping: {e}");
         };
 
-        let response = response?;
-        let secured_response = mask::secure_value(&response);
-        span.set_response(&secured_response);
-        tracing::debug!(data = %secured_response, "Gateway API payment response");
-        let res = serde_json::from_value::<SeguraResponse<_>>(response)?;
-        Ok(res.into_std_result()?)
+        Ok(response.into_std_result()?)
     }
 
     pub async fn hosted_payment(
@@ -201,11 +224,8 @@ impl SeguraGateway {
         pay_request: connect::api::payment::GwConnectH2HPaymentRequest,
         span: &mut InteractionSpan,
     ) -> Result<SeguraOkResponse<payin::PaymentInitData>> {
-        let client_id = &pay_request.settings.client_id;
-        let secret = &pay_request.settings.secret;
         let init_response = self
             .init(
-                authenticated_headers(client_id, secret),
                 (&pay_request).into(),
                 span,
                 InitRequestUrlSuffix::HostedPayment,

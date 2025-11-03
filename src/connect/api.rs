@@ -8,22 +8,23 @@ use crate::{
         interaction_log::{InteractionLog, InteractionSpan},
         status,
     },
-    gateway::SeguraGateway,
+    gateway,
     state::AppState,
 };
 
 #[instrument(skip_all)]
 pub async fn pay(
-    State(AppState { gate, db, .. }): State<AppState>,
+    State(AppState { db }): State<AppState>,
     Json(payment): Json<payment::GwConnectH2HPaymentRequest>,
 ) -> Result<GwConnectResponse<GwConnectH2HPaymentResponse>> {
     let mut span = InteractionSpan::enter();
+    let ctx = gateway::RequestContext::new(&payment.settings);
     match &payment.params.card_params {
-        Some(card_params) => match gate.init_h2h_payment(&payment, &mut span).await {
+        Some(card_params) => match ctx.init_h2h_payment((&payment).into(), &mut span).await {
             Ok(init_response) => {
                 let init_log = span.interaction_log("init_payment");
                 let mut process_span = InteractionSpan::enter();
-                match gate
+                match ctx
                     .process_h2h_payment(
                         &payment,
                         card_params,
@@ -55,7 +56,7 @@ pub async fn pay(
                 Err(GwConnectErrorResponse::new(e.to_string(), vec![log]))
             }
         },
-        None => match gate.hosted_payment(payment, &mut span).await {
+        None => match ctx.hosted_payment(payment, &mut span).await {
             Ok(res) => {
                 span.set_response(&res);
                 let log = span.interaction_log("payment");
@@ -76,18 +77,13 @@ pub async fn pay(
 
 #[instrument(skip_all)]
 pub async fn status(
-    State(gate): State<SeguraGateway>,
     Json(status_request): Json<status::req::Request>,
 ) -> Result<GwConnectResponse<status::res::Status>> {
     let mut span = InteractionSpan::enter();
+    let ctx = gateway::RequestContext::new(&status_request.settings);
     tracing::debug!(token = %status_request.payment.token, gateway_token = %status_request.payment.gateway_token, "Connect API status request");
-    match gate
-        .status(
-            &status_request.settings.client_id,
-            &status_request.settings.secret,
-            &status_request.payment.gateway_token,
-            &mut span,
-        )
+    match ctx
+        .status(&status_request.payment.gateway_token, &mut span)
         .await
     {
         Ok(status) => {
@@ -222,6 +218,7 @@ pub mod payment {
     pub struct Settings {
         pub client_id: String,
         pub secret: String,
+        pub sandbox: Option<bool>,
     }
 }
 

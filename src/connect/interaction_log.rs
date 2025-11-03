@@ -55,7 +55,7 @@ impl InteractionSpan {
     pub fn interaction_log(self, kind: &str) -> InteractionLog {
         let created_at = OffsetDateTime::now_utc();
         InteractionLog {
-            gateway: "oxygate".into(),
+            gateway: "segura".into(),
             request: self.request,
             status: self.response_status,
             response: self.response,
