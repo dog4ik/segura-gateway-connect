@@ -10,8 +10,9 @@ pub trait MaskPolicy {
 impl MaskPolicy for Masked {
     fn mask(card: &str) -> String {
         let len = card.len();
-        if len > 4 {
-            "*".repeat(len - 4) + &card[len - 4..]
+        if len > 10 {
+            let masked_middle = "*".repeat(len - 10);
+            format!("{}{}{}", &card[..6], masked_middle, &card[len - 4..])
         } else {
             card.to_string()
         }

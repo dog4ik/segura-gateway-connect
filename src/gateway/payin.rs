@@ -3,22 +3,32 @@
 pub struct PaymentInitRequest<'a> {
     pub amount: String,
     pub currency: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub callback_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_url: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone_number: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_name: Option<&'a str>,
     pub customer_id: &'a str,
     pub client_reference: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub narration: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<&'a str>,
     pub payment_method: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub zip_code: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<&'a str>,
 }
 
@@ -40,16 +50,21 @@ pub struct ProcessRequest<'a> {
     pub expiry_month: &'a str,
     pub expiry_year: &'a str,
     pub reference: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "customerdob")]
     pub customer_dob: Option<&'a str>, // Format: YYYY-MM-DD
     #[serde(rename = "cardholdername")]
     pub cardholder_name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "customerfirstname")]
     pub customer_first_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "customerlastname")]
     pub customer_last_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub card_scheme: Option<String>, // e.g. "VISA"
-    pub card_type: Option<&'a str>,   // e.g. "DEBIT"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_type: Option<&'a str>, // e.g. "DEBIT"
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -62,7 +77,6 @@ pub enum PaymentProcessData {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-
 #[serde(rename_all = "camelCase")]
 pub struct StandardPaymentData {
     pub success: bool,
