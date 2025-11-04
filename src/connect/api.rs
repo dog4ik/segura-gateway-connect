@@ -230,6 +230,7 @@ pub struct GwConnectH2HPaymentResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_request: Option<RedirectRequest>,
     pub result: super::Status,
+    pub card_enrolled: bool,
     pub gateway_token: Option<String>,
 }
 
