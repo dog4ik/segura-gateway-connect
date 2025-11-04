@@ -189,6 +189,8 @@ pub mod payment {
                         holder,
                     }: H2HCardParamsShadow,
                 ) -> Self {
+                    // Replace '-' when recativepay sends us incorrect card pan.
+                    let pan = pan.replace('-', "");
                     Self {
                         cvv,
                         expires,
