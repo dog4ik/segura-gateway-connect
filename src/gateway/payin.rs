@@ -1,3 +1,5 @@
+use crate::gateway::SeguraStatus;
+
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentInitRequest<'a> {
@@ -70,31 +72,23 @@ pub struct ProcessRequest<'a> {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum PaymentProcessData {
-    /// Standard payment response
-    Standard(StandardPaymentData),
     /// 3DS card payment response(with redirect)
     ThreeDS(ThreeDSPaymentData),
+    /// Standard payment response
+    Standard(StandardPaymentData),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StandardPaymentData {
     pub success: bool,
-    pub currency: String,
-    pub amount: f64,
     pub order_reference: String,
-    pub status: String,
+    pub status: SeguraStatus,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct ThreeDSPaymentData {
-    pub order_id: String,
-    pub transaction_id: String,
-    pub currency: String,
-    pub amount: f64,
-    pub status: super::SeguraStatus,
-    pub created: String,
-    pub descriptor: String,
+    pub status: SeguraStatus,
     pub redirect: RedirectData,
 }
 

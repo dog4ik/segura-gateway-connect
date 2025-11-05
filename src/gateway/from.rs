@@ -54,18 +54,18 @@ impl From<(SeguraOkResponse<super::payin::PaymentProcessData>, String)>
     fn from(
         (value, reference_token): (SeguraOkResponse<super::payin::PaymentProcessData>, String),
     ) -> Self {
-        let reference;
         let card_enrolled;
+        let status;
         let redirect_request = match value.data {
             gateway::payin::PaymentProcessData::Standard(standard_payment_data) => {
                 tracing::trace!("Segura standard response");
-                reference = standard_payment_data.order_reference;
+                status = standard_payment_data.status;
                 card_enrolled = false;
                 None
             }
             gateway::payin::PaymentProcessData::ThreeDS(three_dspayment_data) => {
                 tracing::trace!("Segura 3ds response");
-                reference = reference_token;
+                status = three_dspayment_data.status;
                 card_enrolled = true;
                 Some(RedirectRequest {
                     url: three_dspayment_data.redirect.url,
@@ -75,9 +75,9 @@ impl From<(SeguraOkResponse<super::payin::PaymentProcessData>, String)>
         };
         Self {
             redirect_request,
-            result: connect::Status::Pending,
+            result: status.into(),
             card_enrolled,
-            gateway_token: Some(reference),
+            gateway_token: Some(reference_token),
         }
     }
 }
