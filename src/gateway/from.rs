@@ -69,7 +69,7 @@ impl From<(SeguraOkResponse<super::payin::PaymentProcessData>, String)>
                 card_enrolled = true;
                 Some(RedirectRequest {
                     url: three_dspayment_data.redirect.url,
-                    kind: connect::api::RedirectRequestType::Get,
+                    kind: connect::api::RedirectRequestType::GetWithProcessing,
                 })
             }
         };
