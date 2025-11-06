@@ -6,7 +6,7 @@ pub mod jwt;
 
 #[derive(Debug)]
 pub struct SendArguments {
-    pub mechant_key: String,
+    pub merchant_key: String,
     pub token: String,
     pub currency: String,
     pub status: CallbackStatus,
@@ -30,7 +30,7 @@ pub enum CallbackStatus {
 
 pub async fn send_callback(
     SendArguments {
-        mechant_key,
+        merchant_key,
         token,
         currency,
         status,
@@ -46,7 +46,7 @@ pub async fn send_callback(
         currency,
         amount,
     };
-    let jwt = jwt::create_jwt(&payload, &mechant_key, &key)?;
+    let jwt = jwt::create_jwt(&payload, &merchant_key, &key)?;
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.typed_insert(axum_extra::headers::Authorization::bearer(&jwt).unwrap());

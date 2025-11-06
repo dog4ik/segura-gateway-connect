@@ -45,7 +45,7 @@ async fn callback_handler(
     };
 
     let args = connect::callback::SendArguments {
-        mechant_key: mapping.merchant_private_key,
+        merchant_key: mapping.merchant_private_key,
         token: mapping.token,
         currency: callback.currency,
         status,
