@@ -1,5 +1,4 @@
 FROM rustlang/rust:nightly-slim AS builder
-ARG BUSINESS_URL
 
 RUN apt-get update && apt-get install -y \
   libssl-dev pkg-config sqlite3 && \
@@ -8,11 +7,6 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src/app
 
 COPY . .
-
-RUN touch database.sqlite
-RUN sqlite3 database.sqlite < init.sql
-ENV DATABASE_URL=sqlite://database.sqlite
-ENV BUSINESS_URL=${BUSINESS_URL}
 
 RUN cargo build --release
 
@@ -25,8 +19,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/local/bin
 
 COPY --from=builder /usr/src/app/target/release/segura-gateway .
-COPY --from=builder /usr/src/app/database.sqlite .
 
-EXPOSE 3030
+VOLUME ["/data"]
+ENV DATABASE_URL=sqlite://data/database.sqlite
 
+EXPOSE 4206
 CMD ["./segura-gateway"]
