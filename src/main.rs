@@ -44,7 +44,7 @@ async fn main() {
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(3030);
+        .unwrap_or(4206);
 
     let listener = tokio::net::TcpListener::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port))
         .await

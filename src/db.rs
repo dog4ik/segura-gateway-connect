@@ -30,6 +30,7 @@ impl Db {
             }
             tokio::fs::OpenOptions::new()
                 .write(true)
+                .truncate(false)
                 .create(true)
                 .open(path)
                 .await
