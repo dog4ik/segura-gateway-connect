@@ -50,7 +50,10 @@ pub async fn send_callback(
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.typed_insert(axum_extra::headers::Authorization::bearer(&jwt).unwrap());
-    let base = option_env!("BUSINESS_URL").unwrap_or("https://business.paysure.global");
+    let base = std::env::var("BUSINESS_URL").unwrap_or_else(|_| {
+        tracing::warn!("BUSINESS_URL is not defined, using default one");
+        "http://business:4000".to_string()
+    });
     client
         .post(format!("{base}/callbacks/v2/gateway_callbacks/{token}"))
         .headers(headers)

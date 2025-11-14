@@ -81,16 +81,13 @@ Redirect
 }
 ```
 
-### Compile time env variables
-
-- `DATABASE_URL` - Connection string for sqlite database
-- `BUSINESS_URL` - Gateway.Connect callback url override (optional)
-
 ### Runtime env variables:
 
 - `CALLBACK_URL` - Callback url gateway should use. Should match url of the server application runs on.
 - `SIGN_KEY` - Key to sign callbacks
 - `PORT` - Port server runs on
+- `DATABASE_URL` - Connection string for sqlite database
+- `BUSINESS_URL` - Gateway.Connect callback url override
 
 ### Build instructions
 
