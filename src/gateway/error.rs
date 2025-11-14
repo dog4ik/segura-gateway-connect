@@ -55,7 +55,17 @@ impl Display for GatewayError {
         match self {
             GatewayError::RequestError(e) => write!(f, "http request error: {e}"),
             GatewayError::GatewayResponse(error_response) => {
-                write!(f, "gateway response: {}", error_response.response_message)
+                write!(
+                    f,
+                    "gateway response: {}, [{}]",
+                    error_response.response_message,
+                    error_response
+                        .errors
+                        .iter()
+                        .map(|e| format!("{} ({})", e.message, e.field_name))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                )
             }
             GatewayError::GatewayDeserialization(e) => {
                 write!(f, "gateway response deserialization: {e}")
