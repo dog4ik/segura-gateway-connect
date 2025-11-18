@@ -1,8 +1,13 @@
+use std::time::Duration;
+
 use axum::http::HeaderMap;
 use axum_extra::headers::HeaderMapExt;
 use serde::Serialize;
 
 pub mod jwt;
+
+const RETRY_ATTEMPTS: usize = 3;
+const RETRY_DELAY: Duration = Duration::from_secs(3);
 
 #[derive(Debug)]
 pub struct SendArguments {
@@ -54,13 +59,27 @@ pub async fn send_callback(
         tracing::warn!("BUSINESS_URL is not defined, using default one");
         "http://business:4000".to_string()
     });
-    client
-        .post(format!("{base}/callbacks/v2/gateway_callbacks/{token}"))
-        .headers(headers)
-        .json(&payload)
-        .send()
-        .await?
-        .text()
-        .await?;
-    Ok(())
+
+    for i in 0..RETRY_ATTEMPTS {
+        match client
+            .post(format!("{base}/callbacks/v2/gateway_callbacks/{token}"))
+            .headers(headers.clone())
+            .json(&payload)
+            .send()
+            .await
+            .and_then(|e| e.error_for_status())
+        {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                tracing::error!(
+                    attempt = i + 1,
+                    "Failed to send callback to gateway connect: {e}"
+                );
+                if i + 1 < RETRY_ATTEMPTS {
+                    tokio::time::sleep(RETRY_DELAY).await;
+                }
+            }
+        }
+    }
+    Err(anyhow::anyhow!("max attempts exceeded"))
 }
