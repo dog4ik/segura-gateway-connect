@@ -88,6 +88,8 @@ Redirect
 - `PORT` - Port server runs on
 - `DATABASE_URL` - Connection string for sqlite database
 - `BUSINESS_URL` - Gateway.Connect callback url override
+- `BASE_URL` - Gateway base url
+- `SANDBOX_BASE_URL` - Gateway sandbox base url
 
 ### Build instructions
 

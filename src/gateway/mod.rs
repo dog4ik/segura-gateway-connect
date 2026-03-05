@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::sync::LazyLock;
 
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -23,6 +24,11 @@ pub mod mask;
 mod payin;
 /// External gateway status response
 mod status;
+
+static BASE_URL: LazyLock<String> =
+    LazyLock::new(|| std::env::var("BASE_URL").expect("BASE_URL must be set"));
+static SANDBOX_BASE_URL: LazyLock<String> =
+    LazyLock::new(|| std::env::var("SANDBOX_BASE_URL").expect("SANDBOX_BASE_URL must be set"));
 
 pub type Result<T> = std::result::Result<T, GatewayError>;
 
@@ -79,21 +85,24 @@ impl Display for InitRequestUrlSuffix {
 
 #[derive(Debug)]
 pub struct RequestContext {
-    base_url: &'static str,
+    base_url: String,
     client: reqwest::Client,
 }
 
 impl RequestContext {
     pub fn new(settings: &connect::api::payment::Settings) -> Self {
         let base_url = match settings.sandbox.unwrap_or(false) {
-            true => "https://api-dev.segura-pay.com/api/v1/payment-gateway",
-            false => "https://api.segura-pay.com/api/v1/payment-gateway",
+            true => SANDBOX_BASE_URL.as_str(),
+            false => BASE_URL.as_str(),
         };
         let client = reqwest::ClientBuilder::new()
             .default_headers(authenticated_headers(&settings.client_id, &settings.secret))
             .build()
             .unwrap();
-        Self { base_url, client }
+        Self {
+            base_url: format!("{base_url}/api/v1/payment-gateway"),
+            client,
+        }
     }
 
     pub async fn post<R: Serialize, T: DeserializeOwned>(
